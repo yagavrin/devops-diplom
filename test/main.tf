@@ -6,5 +6,5 @@ terraform {
 provider "random" {}
 
 resource "random_id" "demo" {
-  byte_length = 2
+  byte_length = 3
 }
