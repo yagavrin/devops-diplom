@@ -1,13 +1,4 @@
 version: 3
-workflows:
-  yc:
-    plan:
-      steps:
-        - init:
-            extra_args:
-              - -backend-config=access_key=$YC_ACCESS_KEY_ID
-              - -backend-config=secret_key=$YC_SECRET_ACCESS_KEY
-        - plan
 projects:
   - name: devops-diplom
     dir: src/backend/infrastructure
