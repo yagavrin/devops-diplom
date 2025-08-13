@@ -14,6 +14,9 @@ terraform {
     region = "ru-central1-d"
     key = "terraform.tfstate"
 
+    workspace_key_prefix = "env"
+    force_path_style     = true
+
     skip_region_validation = true
     skip_credentials_validation = true
 
