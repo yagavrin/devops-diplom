@@ -11,17 +11,13 @@ terraform {
       s3 = "https://storage.yandexcloud.net"
     }
     bucket = "yagavrin-tf-backend"
-    region = "ru-central1-d"
+    region = "ru-central1"
     key = "terraform.tfstate"
 
     workspace_key_prefix = "env"
-    force_path_style     = true
+    use_path_style       = true
 
     skip_region_validation = true
-    skip_credentials_validation = true
-
-    skip_requesting_account_id = true
-    skip_s3_checksum = true
   }
 }
 
