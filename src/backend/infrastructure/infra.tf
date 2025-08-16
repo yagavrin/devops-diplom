@@ -137,6 +137,29 @@ variable "k8s_worker_resources" {
   }
 }
 
+variable "atlantis_resources" {
+  type = object({
+    cores          = number
+    memory         = number
+    core_fraction  = number
+    platform_id    = string
+    image_name     = string
+    is_preemptible = bool
+    has_nat        = bool
+    disk_size      = number
+  })
+  default = {
+    cores          = 2
+    memory         = 2
+    core_fraction  = 20
+    platform_id    = "standard-v2"
+    image_name     = "ubuntu-2204-lts"
+    is_preemptible = true
+    has_nat        = true
+    disk_size      = 20
+  }
+}
+
 # Instance Group
 
 variable "instance_group" {
