@@ -12,22 +12,22 @@ terraform {
     }
     bucket = "yagavrin-tf-backend"
     region = "ru-central1"
-    key = "terraform.tfstate"
+    key    = "terraform.tfstate"
 
     workspace_key_prefix = "env"
     use_path_style       = true
 
-    skip_region_validation = true
+    skip_region_validation      = true
     skip_credentials_validation = true
 
     skip_requesting_account_id = true
-    skip_s3_checksum = true
+    skip_s3_checksum           = true
   }
 }
 
 provider "yandex" {
-  token     = var.token
-  cloud_id  = var.cloud_id
-  folder_id = var.folder_id
-  zone      = var.default_zone
+  service_account_key_file = file("~/yc_tf_key.json")
+  cloud_id                 = var.cloud_id
+  folder_id                = var.folder_id
+  zone                     = var.default_zone
 }
