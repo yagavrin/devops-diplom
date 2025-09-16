@@ -27,6 +27,7 @@ resource "yandex_compute_instance" "atlantis_vm" {
   metadata = local.vms_metadata
 }
 
+
 output "atlantis_vm_ip" {
   value       = yandex_compute_instance.atlantis_vm.network_interface[0].nat_ip_address
   description = "Atlantis server IP"
