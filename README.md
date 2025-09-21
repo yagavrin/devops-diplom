@@ -130,8 +130,29 @@ EOF
 Запуск установки kubespray
 
 ```bash
-ansible-playbook -i inventory/sample/inventory.ini -b -v --private-key ~/.ssh/nt_test cluster.yml --tags=kubeconfig
+ansible-playbook -i inventory/sample/inventory.ini -b -v --private-key ~/.ssh/nt_test cluster.yml
+
 ```
+
+Скопировать конфиг себе на ВМ
+
+```bash
+ssh ubuntu@192.168.40.10 "sudo cat /etc/kubernetes/admin.conf" > ~/.kube/config
+```
+
+Отредактировать конфиг `nano ~/.kube/config`
+
+```yaml
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: ...
+    server: https://192.168.40.10:6443 # изменить на локальный адрес control plane ноды
+  name: cluster.local
+...
+```
+
+
 
 ### Установка системы мониторинга в кластер
 
