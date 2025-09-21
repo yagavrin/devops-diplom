@@ -23,6 +23,7 @@ resource "yandex_compute_instance" "k8s_worker_group" {
   network_interface {
     subnet_id = yandex_vpc_subnet.private_subnets[2].id
     nat       = var.k8s_worker_resources.has_nat
+    security_group_ids = [ yandex_vpc_security_group.k8s_private.id ]
   }
 
   metadata = local.vms_metadata

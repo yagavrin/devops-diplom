@@ -22,6 +22,7 @@ resource "yandex_compute_instance" "atlantis_vm" {
   network_interface {
     subnet_id = yandex_vpc_subnet.public_subnet.id
     nat       = var.atlantis_resources.has_nat
+    security_group_ids = [ yandex_vpc_security_group.atlantis_sg.id ]
   }
 
   metadata = local.vms_metadata

@@ -91,7 +91,7 @@ sudo apt-get install -y kubectl
 Добавляем ssh-ключ для Ansible
 
 ```bash
-eval "$(ssh-agent -s)
+eval "$(ssh-agent -s)"
 ssh-add ~/.ssh/nt_test
 
 ssh-add -l
@@ -116,14 +116,14 @@ cat <<EOF > inventory/sample/inventory.ini
 [all:vars]
 ansible_user=ubuntu
 [kube_control_plane]
-node1 ansible_host=192.168.40.30 etcd_member_name=etcd1
+node1 ansible_host=192.168.40.10 etcd_member_name=etcd1
 
 [etcd:children]
 kube_control_plane
 
 [kube_node]
-node2 ansible_host=192.168.40.31
-node3 ansible_host=192.168.40.16
+node2 ansible_host=192.168.40.8
+node3 ansible_host=192.168.40.31
 EOF
 ```
 
