@@ -152,7 +152,14 @@ clusters:
 ...
 ```
 
+Устанавливаем `nginx ingress controller`
 
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
+kubectl patch svc ingress-nginx-controller -n ingress-nginx \
+  -p '{"spec":{"externalTrafficPolicy":"Cluster"}}'
+
+```
 
 ### Установка системы мониторинга в кластер
 
@@ -190,6 +197,39 @@ kubectl apply --server-side -f manifests/setup
 kubectl wait --for=condition=Established --all CustomResourceDefinition --timeout=60s
 kubectl apply -f manifests/
 ```
+
+Настраиваем работу Grafana по пути `/grafana`
+```bash
+kubectl -n monitoring set env deployment/grafana \
+  GF_SERVER_ROOT_URL="http://158.160.177.192/grafana" \
+  GF_SERVER_SERVE_FROM_SUB_PATH="true"
+kubectl -n monitoring rollout restart deployment/grafana
+```
+
+Ingress манифест для Grafana
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+  namespace: monitoring
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /grafana
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 3000
+```
+
+<img width="1164" height="564" alt="изображение" src="https://github.com/user-attachments/assets/186fbbd2-028d-4e5d-95fc-61f4b62e11e7" />
+
 
 ### Настройка CI/CD
 
@@ -373,3 +413,4 @@ services:
 
 Пример завершенного пулл реквеста:
 https://github.com/yagavrin/devops-diplom/pull/4
+
