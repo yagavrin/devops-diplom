@@ -231,3 +231,145 @@ Sub: repo:yagavrin/devops-diplom-app:environment:prod
 ```bash
 kubectl apply -f nginx-deployment.yaml
 ```
+
+### Настройка Atlantis
+
+Подготовка бинарника Terraform
+```bash
+docker run --name=tf hashicorp/terraform:1.12.2
+docker cp tf:/bin/terraform /tmp/terraform1.12.2
+docker rm tf
+```
+Настройка Github:
+* Необходимо создать сервисный аккаунт Github, который будет использовать Atlantis;
+* У этого аккаунта создать personal access token c правами на `repo`;
+* Дать сервисному аккаунту доступ к репозиторию в Collaborators;
+
+<img width="1284" height="702" alt="diplom-collaborators" src="https://github.com/user-attachments/assets/47814f69-0b99-4c47-99ad-4bb9b56922d1" />
+
+* Настроить вебхук, который будет отправляться на сервер Atlantis при пул реквестах и коммитах;
+  - Тип - `applicatin/json`;
+  - Установить секретный токен `ATLANTIS_GH_WEBHOOK_SECRET` для защиты;
+  - Events (проставить галочки): Issue comments, Pull requests, Pushes;
+
+ <img width="1221" height="883" alt="diplom-webhook" src="https://github.com/user-attachments/assets/928bfe3a-95f0-43e9-acfc-bcc381d5f621" />
+
+* Установить защиту main-ветки репозитория;
+
+<img width="926" height="927" alt="diplom-branch" src="https://github.com/user-attachments/assets/1e444b99-5fa0-4b50-a84f-3f26ec034b7e" />
+
+Подготовка VM Atlantis
+```bash
+export ATLANTIS_IP=$(terraform output -raw tf_atlantis_vm_ip)
+scp /tmp/terraform1.12.2 ubuntu@$ATLANTIS_IP:/tmp/terraform1.12.2
+scp ~/.ssh/nt_test.pub ubuntu@$ATLANTIS_IP:/tmp/nt_test.pub
+scp ~/yc_tf_key.json ubuntu@$ATLANTIS_IP:/tmp/yc_tf_key.json
+```
+
+Далее на VM Atlantis:
+
+```bash
+ssh ubuntu@$ATLANTIS_IP
+```
+
+Установка Docker
+
+```bash
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+sudo groupadd docker
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+Подготовка конфига для работы Atlantis
+```bash
+mkdir ~/atlantis-data
+mkdir ~/atlantis-data/bin
+mv /tmp/nt_test.pub ~/atlantis-data/nt_test.pub
+mv /tmp/terraform1.12.2 ~/atlantis-data/bin/terraform1.12.2 && chmod +x ~/atlantis-data/bin/terraform1.12.2
+mv /tmp/yc_tf_key.json ~/atlantis-data/yc_tf_key.json
+chmod 644 ~/atlantis-data/nt_test.pub
+chmod 644 ~/atlantis-data/yc_tf_key.json
+
+cat <<EOF > ~/atlantis-data/.terraformrc
+provider_installation {
+  network_mirror {
+    url = "https://terraform-mirror.yandexcloud.net/"
+    include = ["registry.terraform.io/*/*"]
+  }
+  direct {
+    exclude = ["registry.terraform.io/*/*"]
+  }
+}
+EOF
+```
+
+Создаем `.env` файл с секретами
+```bash
+HOME=/home/ubuntu
+ATLANTIS_GH_WEBHOOK_SECRET=
+ATLANTIS_URL=http://...
+YC_SECRET_ACCESS_KEY=
+YC_ACCESS_KEY_ID=
+TF_VAR_folder_id=
+TF_VAR_cloud_id=
+TF_VAR_token=
+GH_BOT_TOKEN=
+GH_BOT_USER=ygatlantisbot
+GH_REPO=github.com/yagavrin/devops-diplom
+SSH_PUB_KEY_NAME=nt_test.pub
+TF_VERSION=v1.12.2
+```
+
+`compose.yaml` для запуска Atlantis
+
+```yaml
+services:
+  atlantis:
+    image: runatlantis/atlantis
+    container_name: atlantis
+    restart: unless-stopped
+    ports:
+      - "4141:4141"
+    volumes:
+      - ${HOME}/atlantis-data:/atlantis-data
+      - ${HOME}/atlantis-data/.terraformrc:/home/atlantis/.terraformrc:ro
+      - ${HOME}/atlantis-data/nt_test.pub:/home/atlantis/.ssh/${SSH_PUB_KEY_NAME}:ro
+      - ${HOME}/atlantis-data/yc_tf_key.json:/home/atlantis/yc_tf_key.json:ro
+    environment:
+      TF_LOG: TRACE
+      TF_LOG_PATH: /atlantis-data/tf.log
+      ATLANTIS_GH_WEBHOOK_SECRET: ${ATLANTIS_GH_WEBHOOK_SECRET}
+      TF_CLI_CONFIG_FILE: /home/atlantis/.terraformrc
+      AWS_ACCESS_KEY_ID: ${YC_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${YC_SECRET_ACCESS_KEY}
+      TF_VAR_folder_id: ${TF_VAR_folder_id}
+      TF_VAR_cloud_id: ${TF_VAR_cloud_id}
+      TF_VAR_ssh_pub_key_path: /home/atlantis/.ssh/${SSH_PUB_KEY_NAME}
+      GH_BOT_TOKEN: ${GH_BOT_TOKEN}
+    command: >
+      server
+      --data-dir=/atlantis-data
+      --atlantis-url="${ATLANTIS_URL}"
+      --repo-allowlist="${GH_REPO}"
+      --gh-user="${GH_BOT_USER}"
+      --gh-token="${GH_BOT_TOKEN}"
+      --gh-webhook-secret="${ATLANTIS_GH_WEBHOOK_SECRET}"
+      --default-tf-version="${TF_VERSION}"
+```
+
+Пример завершенного пулл реквеста:
+https://github.com/yagavrin/devops-diplom/pull/4
