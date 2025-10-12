@@ -62,15 +62,25 @@ resource "yandex_vpc_security_group" "k8s_private" {
   # Allow health checks from Yandex NLB
   ingress {
     protocol          = "TCP"
-    description       = "Allow NLB health checks on HTTP"
-    port              = 80
-    predefined_target = "loadbalancer_healthchecks"
+    description       = "Allow NLB traffik"
+    from_port = 30000
+    to_port = 32767
+    v4_cidr_blocks = ["0.0.0.0/0"]
   }
+
+
 
   ingress {
     protocol          = "TCP"
-    description       = "Allow NLB health checks on HTTPS"
-    port              = 443
+    description       = "Allow NLB health checks"
+    port              = 10250
+    predefined_target = "loadbalancer_healthchecks"
+  }
+
+    ingress {
+    protocol          = "TCP"
+    description       = "Allow NLB health checks"
+    port              = 6443
     predefined_target = "loadbalancer_healthchecks"
   }
 

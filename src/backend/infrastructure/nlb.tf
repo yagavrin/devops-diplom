@@ -5,24 +5,23 @@ resource "yandex_lb_network_load_balancer" "k8s-ingress-lb" {
     name        = "http"
     port        = 80
     protocol    = "tcp"
-    target_port = 80
+    target_port = 32475
   }
 
   listener {
     name        = "https"
     port        = 443
     protocol    = "tcp"
-    target_port = 443
+    target_port = 30446
   }
 
   attached_target_group {
     target_group_id = yandex_lb_target_group.k8s-worker-tg.id
 
     healthcheck {
-      name = "http"
-      http_options {
-        port = 80
-        path = "/healthz"
+      name = "kubelet"
+      tcp_options {
+        port = 10250
       }
     }
 
